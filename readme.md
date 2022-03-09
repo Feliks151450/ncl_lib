@@ -1,3 +1,1 @@
-/Users/linlifei/data/
-/Users/linlifei/desktop/
-/Volumes/HHD/
+[程序说明](https://www.craft.do/s/C4zgxJGW8CIxQA)
