@@ -1,293 +1,230 @@
-1undef("plot_ts") ; FX| plot_ts
-  function plot_ts(wks,ts,opt)
-  local rts,res_lines
+undef("reg_dev") ; FX| reg_dev
+function reg_dev(wks,ts,type,ranges,opt)
   begin
+  clr = (/"#407933","#72BF4F","#9BCE7F","#C1E0B8","#FFFFFF","#F6E9BC","#F1CD5C","#F0BF2A","#A57E1E"/)
+  res = opt
+  res = True
+  localpath = readpath(1)
+  opt@polar = get_res_value_keep(opt,"polar",False)
+  ; opt@with  = get_res_value_keep(opt,"with",(/ts0@type,ts1@type/))
+  nyear     = dimsizes(ts&year)
+  
+  opt@preyear = get_res_value_keep(opt,"preyear",False)
+  t = t_value(nyear-2)
+  ;plot 
+  opt@data=1
+  ; type@source = "jra55"
+  type@year := ts&year
+  opt@lonP0=False 
+  opt@vertical=False
+  if((ranges(3)-ranges(2)) .eq. 360)
+    range = (/ranges(0)-2,ranges(1)+2,ranges(2),ranges(3)/)
+  else
+    range = (/ranges(0)-2,ranges(1)+2,ranges(2)-2,ranges(3)+2/)
+  end if
+  ; range = (/ranges(0)-2,ranges(1)+2,ranges(2)-2,ranges(3)+2/)
+  ; range = ranges
+  if(opt@polar) range(1:3) = (/90,0,360/) end if
+  X := predata(type,range,opt)
+  if(isatt(opt,"multi"))
+    X  = (/X*opt@multi/)
+  end if
 
-  nyear = dimsizes(ts&year)
-  rts   = True
-    rts@tmYROn                      = get_res_value_keep(opt,"tmYROn",False)
-    rts@tmXTOn                      = False
-    rts@tmYLValues                  = get_res_value_keep(opt,"tmYLValues",ispan(-30,30,10)/10.)
-    rts@minmax = get_res_value_keep(opt,"minmax",(/min(rts@tmYLValues),max(rts@tmYLValues)/))
-  ; rts@gsnMaximize                 = True
-    rts@gsnDraw                     = get_res_value_keep(opt,"gsnDraw",True)
-    rts@gsnFrame                    = get_res_value_keep(opt,"gsnFrame",True)
-    rts@vpYF                        = 0.8       ; the plot
-    rts@vpXF                        = get_res_value_keep(opt,"vpXF",0.13)
-    rts@vpWidthF                    = get_res_value_keep(opt,"vpWidthF",0.82)
-    rts@vpHeightF                   = get_res_value_keep(opt,"vpHeightF",0.35)
-  ; rts@gsnMaximize                 = True
-    rts@xyDashPatterns              = (/0.,0.,0./)      ; make all lines solid
-    rts@trXMinF                     = min(ts&year)-1
-    rts@trXMaxF                     = get_res_value_keep(opt,"trXMaxF",max(ts&year)+1)
-    rts@tmXBTickSpacingF            = get_res_value_keep(opt,"tmXBTickSpacingF",5.)
-    rts@tmXBMode                    = get_res_value_keep(opt,"tmXBMode","Manual")
-    rts@tmXBLabelStride              = get_res_value_keep(opt,"tmXBLabelStride",1)
-    rts@tmXBTickStartF               = get_res_value_keep(opt,"tmXBTickStartF",rts@trXMinF)
-    if(rts@tmXBMode .eq. "Explicit")
-      rts@tmXBLabels = opt@tmXBLabels
-      rts@tmXBValues = ispan(min(ts&year),max(ts&year),rts@tmXBTickSpacingF)
-      print(rts@tmXBValues)
-    end if
-    rts@tmXMajorGrid                = False
-    rts@tmXMajorGridLineDashPattern = 2
-    rts@tmYLLabelDeltaF             = -0.6
-    rts@tmXBLabelDeltaF             = -0.5
-    rts@tmXBMajorLengthF            = 0.01
-    rts@tmXBMinorOn                 = False
-  ; rts@tmXUseBottom                = False
-    rts@tmXBMajorOutwardLengthF     = 0.01
-    rts@tmYLMajorOutwardLengthF     = 0.01
-    rts@tmYLMajorLengthF            = 0.01
-    rts@xyCurveDrawOrder = "postdraw"
-    rts@tmBorderThicknessF = get_res_value_keep(opt,"tmBorderThicknessF",8)
-    rts@tmXBMajorThicknessF = rts@tmBorderThicknessF
-    rts@tmYLMajorThicknessF = rts@tmBorderThicknessF
-    if(rts@tmYROn)
-      rts = get_res_eq(opt,"tmYR")
-      rts@tmYRMajorOutwardLengthF     = 0.01
-      rts@tmYRMajorLengthF            = 0.01
-      rts@tmYRMajorThicknessF = rts@tmBorderThicknessF
-      rts@tmYUseLeft = False
-      rts@tmYRMinorOn = False
-      rts@tmYRMode = "Explicit"
-      ; rts@tmYRLabels = sprintf("%0.1f", get_res_value_keep(opt,"tmYRLabels",rts@tmYRValues))
-      rts@tmYRLabelsOn = True
-      rts@tmYRLabelFontHeightF         = get_res_value_keep(opt, "tmLabelFontHeightF",0.03)
-      rts@tmYRValues = get_res_value_keep(opt,"tmYRValues",ispan(-10,10,2)/10.)
-    end if
-  rts_rm                           = rts
-    rts@tiXAxisOn = isatt(opt,"tiXAxisString")
-    if(rts@tiXAxisOn)
-      rts = get_res_eq(opt,"tiXAxis")
-      ; rts@tiXAxisString = get_res_value_keep(opt,"tiXAxisString","")
-      ; rts@tiXAxisOffsetYF = get_res_value_keep(opt,"tiXAxisOffsetYF",0.)
-      rts@tiXAxisFontHeightF = get_res_value_keep(opt,"tiXAxisFontHeightF",0.03)
-    end if
 
-    rts@tiYAxisOn = isatt(opt,"tiYAxisString")
-    if(rts@tiYAxisOn)
-      rts = get_res_eq(opt,"tiYAxis")
-      print(rts@tiYAxisString)
-      ; rts@tiYAxisString = get_res_value_keep(opt,"tiYAxisString","")
-      ; rts@tiYAxisOffsetYF = get_res_value_keep(opt,"tiYAxisOffsetYF",0.)
-      rts@tiYAxisFontHeightF = get_res_value_keep(opt,"tiYAxisFontHeightF",0.03)
-    end if
-    rts@gsnXYBarChartBarWidth        = 0.70
-    rts@gsnStringFontHeightF         = get_res_value_keep(opt, "gsnStringFontHeightF",0.04)
-    rts@gsnStringFont = where(get_res_value_keep(opt,"gsnStringBold",False),22,21)
-    rts@tmXBLabelFontHeightF         = get_res_value_keep(opt, "tmLabelFontHeightF",0.03)
-    rts@tmXBLabelDeltaF              = 0.05
+  if(type .eq. 14) X = (/X*1e+6/) end if
+  if(type .eq. 1) X = (/X*0.01/) end if
+  cor := escorc_n(ts, X, 0, 0)
+  rec := regCoef_n(ts, X, 0, 0)
+  ; printVarSummary(rec)
+  ; rec0 = dim_avg_n(rec,0)
+  ; print(dim_avg_n(rec0,0))
+  ; print(typeof(wks))
+  if(.not. isgraphic(wks))
+    copy_VarCoords(X(0,:,:), rec)
+    return(rec)
+  end if
 
-    rts@trYMinF                     = rts@minmax(0)      ; min value on x-axis
-    rts@trYMaxF                     = rts@minmax(1)
-    rts@tmYLMinorOn                  = False
-    rts@tmYLLabelFontHeightF         = get_res_value_keep(opt, "tmLabelFontHeightF",0.03)
-    rts@tmYLLabelDeltaF              = 0.05
-    rts@tmYLLabelsOn                 = get_res_value_keep(opt,"tmYLLabelsOn",True)
-    rts@tmYLMode                     = "Explicit"
-    rts@tmYLLabels                   = sprintf("%0.1f", rts@tmYLValues)
 
-    rts@lbLabelFontHeightF           = get_res_value_keep(opt,  "lbLabelFontHeightF",0.025)
+  if(isatt(res,"cnLineThicknessF")) rec@cnLineThicknessF = res@cnLineThicknessF end if
+  ; cor := smth9_Wrap(cor, 0.5, 0., False)
+  
+  ; cor@cnLevels         = (/-t@r999,-t@r99,-t@r95,-t@r90,t@r90,t@r95,t@r99,t@r999/)
+    ; cor@cnLevels         = (/-0.9,-0.7,-0.5,-0.3,0.3,0.5,0.7,0.9/)
+  ; cor@cnLevels         := (/-t@r99,-t@r95,-t@r90,t@r90,t@r95,t@r99/)
 
-      
-    
-    rts@addLeftString = get_res_value_keep(opt,"addLeftString","")
-    rts@gsnLeftString                = rts@addLeftString+get_res_value_keep(opt,"gsnLeftString",ts@name)
-    rts@gsnRightString               = get_res_value_keep(opt,"gsnRightString","")
-    rts@gsnLeftStringOrthogonalPosF = get_res_value_keep(opt,"gsnLeftStringOrthogonalPosF",0.01)
-    rts@gsnLeftStringParallelPosF = get_res_value_keep(opt,"gsnLeftStringParallelPosF",0)
-    rts@gsnRightStringOrthogonalPosF = get_res_value_keep(opt,"gsnRightStringOrthogonalPosF",0.06)
-    rts@xyLineColors                 = (/"tomato","forest green","forest green"/) ; colors chosen
-    rts@xyMarkLineModes              = (/"Lines","MarkLines","Lines"/)
-    rts@xyMarkers                    = (/16,16,16,16/)
-    rts@xyMarkerColors               = rts@xyLineColors
-    rts@xyMarkerSizeF                = get_res_value_keep(opt,"xyMarkerSizeF",0.012)
-      if(get_res_value_keep(opt,"runcor",False))
-        rts@tmXBMode   = "Explicit"
-        rts@tmXBValues = opt@tmXBValues
-        rts@tmXBLabels = opt@tmXBLabels
-      end if
-      if(isatt(opt, "Yref")) 
-        rts@gsnYRefLine             = opt@Yref
-        rts@gsnYRefLineDashPatterns = new(dimsizes(opt@Yref),integer)
-        rts@gsnYRefLineDashPatterns = where(opt@Yref .eq. 0, 0, 1)
-        rts@gsnYRefLineColors       = where(opt@Yref .eq. 0, "black", "dark slate gray")
-        rts@gsnYRefLineThicknesses  = 8
-      else 
-        rts@gsnYRefLine      = 0
-        rts@gsnYRefLineThicknessF  = 5
-        rts@gsnYRefLineDashPatterns = 0
-        rts@gsnYRefLineColor = 1
-      end if
+  ; rec@cnFillColors = (/clr(0),clr(1),clr(3),clr(4),clr(5),clr(7),clr(8)/)
+  cor@reverseColors    := get_res_value_keep(opt,"reverseColors",False)
+  rec@Scale            := opt@Scale
 
-          ; rts@gsnYRefLine        =(/-opt@Yref,0.0,opt@Yref/);where(isatt(opt, "Yref"), opt@Yref, 0);
-      ; rts@gsnYRefLineDashPatterns=(/1,0,1/)    ; line thicknesses 
-      rts@gsnXYBarChart = get_res_value_keep(opt,"gsnXYBarChart",True)
-      rts@tmYLLabelsOn = get_res_value_keep(opt,"tmYLLabelsOn",True)
-      ; if(rts@tmYLLabelsOn)
-      ;   rts@gsnLeftStringOrthogonalPosF = 0.01
-      ;   rts@gsnRightStringOrthogonalPosF = 0.02
-      ; else
-      ;   rts@gsnLeftStringOrthogonalPosF = 0.03
-      ;   rts@gsnRightStringOrthogonalPosF = 0.05
-      ; end if
-      rts@xyLineOpacities = (/1.,1,1/)
-    if(rts@gsnXYBarChart)
-      rts@gsnAboveYRefLineColor = "black"           ; above ref line fill red
-      rts@gsnBelowYRefLineColor = "black"          ; below ref line fill blue
-      rts@xyLineColors          = (/"black","black","black"/)
-      rts@xyMarkLineModes       = (/"Lines","Lines","Lines"/)
-      rts@xyLineThicknesses     = (/0.1,0.1,1/)      ; line thicknesses
-      plot                      = gsn_csm_xy(wks,ts&year,ts,rts)
-      ; if(dimsizes(ts1) .ne. 1)
-      ;   rts@gsnXYBarChart = False
-      ;   rts@xyLineColors       = (/"tomato","forest green","forest green"/) ; colors chosen
-      ;   rts@xyMarkLineModes=(/"MarkLines","MarkLines","Lines"/)
-      ;   rts@xyLineThicknesses  = (/5,5,5/)
-      ;   rts@xyMarkers= (/16,16,16,16/)
-      ;   plt = unique_string("xy")
-      ;   plot@$plt$ = gsn_csm_xy(wks,ts1&year,ts1,rts)
-      ;   overlay(plot, plot@$plt$)
-      ;   ; draw(plot)
-      ;   ; frame(wks)
-      ; end if
+  ; rec@cnFillColors = opt@cnFillColors
+  ; if(isatt(opt,"cnLineThicknessF"))
+  ; rec@cnLineThicknessF := opt@cnLineThicknessF
+  ; end if
+  rec@gsnContourNegLineDashPattern = get_res_value_keep(opt,"gsnContourNegLineDashPattern",1)
+  copy_VarCoords( X(0,:,:), cor)
+  copy_VarCoords( X(0,:,:), rec)
+  if(get_res_value_keep(opt,"returnRec",False))
+    return(rec)
+  end if
+;画图属性继承区，可折叠
+  res@gsnDraw = False
+  res@gsnFrame = False
+  ; if(X@mon_name .eq. "JA")
+    ; res@gsnRightString = get_res_value_keep(res,"addRightString","")+X@mon_name
+  ; else
+    res@gsnRightString = get_res_value_keep(res,"addRightString","")+get_res_value_keep(opt,"gsnRightString",X@mon_name) 
+
+  ; end if
+    res@lbLabelBarOn                 = get_res_value_keep(opt,"lbLabelBarOn",True)
+  ; res@gsnRightString               = get_res_value_keep(opt,"addRightString","") ;+ X@mon_name+where(opt@preyear,"(-1)","")
+    res@lbOrientation                = get_res_value_keep(opt,"lbOrientation","Horizontal")
+  ; opt@polar                        = type .eq. 8
+    res@tmXBLabelStride              = get_res_value_keep(opt,"tmXBLabelStride",2)
+    res@tmYLLabelStride              = get_res_value_keep(opt,"tmYLLabelStride",2)
+    ; rec@gsnContourNegLineDashPattern = get_res_value_keep(opt,"gsnContourNegLineDashPattern",12)
+    res@gsnStringFontHeightF         = get_res_value_keep(opt,"gsnStringFontHeightF",0.027)
+  ; if(res@lbOrientation .eq. "Vertical")
+  ;   ; res@pmLabelBarHeightF = opt@vpHeightF*1.08
+  ;   res@pmLabelBarHeightF = get_res_value_keep(opt,"pmLabelBarHeightF",opt@vpHeightF*1.08)
+  ;   ; res@pmLabelBarWidthF = get_res_value_keep(opt,)
+  ;   res@lbLabelFontHeightF = get_res_value_keep(opt,"lbLabelFontHeightF",0.03)
+  ; ; else
+  ; ;   res@pmLabelBarHeightF = get_res_value_keep(opt,"")
+  ; ;   res@pmLabelBarWidthF = 1.0
+  ; end if
+  ; if(isatt(opt, "dots")) res = get_res_eq(opt,"dots") end if
+  ; if(get_res_value_keep(opt,"dots",False)) 
+    ; res@dots = True
+    ; res@dotslon = opt@dotslon
+    ; res@dotslat = opt@dotslat
+    ; res@dotscolor = get_res_value_keep(opt,"dotscolor","tomato")
+    ; res@dots1 = get_res_value_keep(opt,"dots1",False)
+    ; res@dotslon1 = get_res_value_keep(opt,"dotslon1",False)
+    ; res@dotslat1 = get_res_value_keep(opt,"dotslat1",False)
+    ; res@dots2 = get_res_value_keep(opt,"dots2",False)
+    ; res@dotslon2 = get_res_value_keep(opt,"dotslon2",False)
+    ; res@dotslat2 = get_res_value_keep(opt,"dotslat2",False)
+  ; end if
+  if(opt@polar)then
+    res@polar = True
+    res@gsnAddCyclic = True
+    res@vpHeightF = 0.8
+    res@gsnPolar = "NH"
     else
-      ; if(dimsizes(ts1) .eq. 1)
-      ; printVarSummary(opt)
-      rts@xyLineColors(0) = get_res_value_keep(opt,"xyLineColor","tomato")
-      ; printVarSummary(rts)
-      rts@xyMarkLineMode = "MarkLines"
-      rts@xyLineThicknessF = get_res_value_keep(opt,"xyLineThicknessF",10)
-      ; rts@xyMarkerSizeF = 0.02
-      if(get_res_value_keep(opt,"shading",False))
-        rts@gsnAboveYRefLineColor = "tomato"
-        ; rts@gsnAboveYRefLineColor := "#f0534e"
-        ; rts@gsnBelowYRefLineColor = "#555aa7"
-        rts@gsnBelowYRefLineColor = "forest green"
+    res@polar = False
+    res@vpHeightF = get_res_value_keep(opt,"vpHeightF",0.4)
+    res@vpWidthF = get_res_value_keep(opt,"vpWidthF",0.8)
+    res@vpXF = 0.0
+    res@gsnMaskLambertConformal = get_res_value_keep(opt,"gsnMaskLambertConformal",False)
+    res@gsnMajorLonSpacing = get_res_value_keep(opt,"gsnMajorLonSpacing",10)
+  end if
+  ; gsnLeftString = get_res_value_keep(opt,"gsnLeftString",ts@name);+" cor. "+X@name) 
+  gsnLeftString = get_res_value_keep(opt,"gsnLeftString",X@name+" linked to "+ts@name)
+  ; if(ts@name .eq. "EAJII")
+    ; res@gsnLeftString = get_res_value_keep(opt,"addLeftString","") + X@name
+  ; else
+    res@gsnLeftString = gsnLeftString
+  ; end if
+  ; res@gsnLeftString=item(a)+" "+ts@name+gsnLeftString
+  ; res@xcnLevels = cor@cnLevels
+  ; res@ycnLevels = rec@cnLevels
+
+  cor@cnLinesOn = False
+  res@plot_mode = get_res_value_keep(opt,"plot_mode",0)
+  if(res@plot_mode .eq. 0)
+    x = cor
+    x@cnLevels := get_res_value_keep(opt,"cnLevels",(/-t@r999,-t@r99,-t@r95,-t@r90,t@r90,t@r95,t@r99,t@r999/))
+    y = rec
+  else
+    x = rec
+    if(isatt(opt,"cnLevels"))
+      x@cnLevels := opt@cnLevels
+    end if
+    y = cor
+    y@cnLevels := (/-t@r90,t@r90/)
+    y@gsnContourNegLineDashPattern = 0
+    if(isatt(opt,"cnLineThicknessF"))
+      y@cnLineThicknessF = opt@cnLineThicknessF
+    end if
+  end if
+  if(.not. get_res_value_keep(opt,"cnLinesOn",True))
+    y := 0
+  end if
+  
+  if(get_res_value_keep(opt,"smoothing",False));平滑
+      y := smth9_Wrap(y, 0.5, 0.5, False)
+  end if
+  if(isatt(opt,"cnFillColors")) x@cnFillColors := opt@cnFillColors end if
+  if(isatt(opt,"mode") .and. opt@mode .eq. "stippling")
+    print("stippling")
+    y@cnLevels := (/-900,-t@r95,t@r95,900/)
+    if(isatt(opt,"cnFillScaleF"))
+      y@cnFillScaleF = opt@cnFillScaleF
+    end if
+    if(isatt(opt,"cnFillDotSizeF"))
+      y@cnFillDotSizeF = opt@cnFillDotSizeF
+    end if
+    if(isatt(opt,"stipplingColor"))
+      y@stipplingColor = opt@stipplingColor
+    end if
+    var = [/x,y/]
+    plot = plt_cn(wks,var,ranges,res)
+  else
+    var = [/x,y/]
+    plot = plt_cn(wks,var,ranges,res)
+  end if
+
+  if(get_res_value_keep(opt,"vector",False))
+      type_u        = type
+      if(isatt(opt,"surf_wind") .and. opt@surf_wind)
+        type_u = 10
+        type_v = 11
+      else
+        type_u = 3
+        type_u@level  = get_res_value_keep(opt,"vclevel",850)
+        type_v = 4
       end if
-      rts@xyLineOpacities(0) = get_res_value_keep(opt,"xyLineOpacityF",1.)
-      rts@xyLineThicknesses(0)     = get_res_value_keep(opt,"xyLineThicknessF",1)      ; line thicknesses
-      plot = gsn_csm_xy(wks,ts&year,ts,rts)
-        ; else
-        ; plot = gsn_csm_xy(wks,ts0&year,(/ts0,ts1/),rts)
-        ; draw(plot)
-        ; frame(wks)
-      ; end if
-    end if
+      type_u@source = "jra55"
+      copy_VarAtts(type_u,type_v)
+      u             = predata(type_u,ranges,opt)
+      v             = predata(type_v,ranges,opt)
+      rec_u         = regCoef_n(ts, u, 0, 0)
+      rec_v         = regCoef_n(ts, v, 0, 0)
+      t_v           = onedtond(rec_v@tval, dimsizes(rec_v))
+      t_u           = onedtond(rec_u@tval, dimsizes(rec_u))
+      rec_u         = where(t_u .le. t@t90 .and. t_u .ge. -t@t90 .and. t_v .le. t@t90 .and. t_v .ge. -t@t90, rec_u@_FillValue,rec_u)
+      rec_v         = where(t_u .le. t@t90 .and. t_u .ge. -t@t90 .and. t_v .le. t@t90 .and. t_v .ge. -t@t90, rec_v@_FillValue,rec_v)
+      copy_VarCoords(u(0,:,:), rec_u)
+      copy_VarCoords(v(0,:,:), rec_v)
+      ; printVarSummary(opt)
+      add_vc_dev(wks,plot,rec_u,rec_v,ranges,opt)
+      ; vec = gsn_csm_vector(wks, rec_u, rec_v, resv)
+      ; overlay(plot, vec)
+  end if
 
-    if(isatt(opt,"name"))
-      str0 = unique_string("text")
-      res_text                    = True                  ; text mods desired
-      res_text@txFontHeightF      = get_res_value_keep(opt,"txFontHeightF",0.02)            ; change text size
-      res_text@txFontThicknessF   = 50
-      res_text@txJust             = "CenterLeft"          ; text justification
-      res_text@txFontColor        = rts@xyLineColor
-      plot@$str0$ = gsn_add_text(wks,plot,opt@name,opt@LegendPos(0),opt@LegendPos(1),res_text);
-    end if
-    if(isatt(opt,"LinePos"))
-      str1 = unique_string("polyline")
-      res_lines                   = True                  ; polyline mods desired
-      res_lines@gsLineDashPattern = 0.                    ; solid line
-      res_lines@gsLineThicknessF  = 10.                    ; line thicker
-      res_lines@gsLineColor       = rts@xyLineColor
-      plot@$str1$ = gsn_add_polyline(wks,plot,opt@LinePos(:1),opt@LinePos(2:),res_lines);
-    end if
-    ; resb = True
-    ; ; resb@gsnYRefLine = -10
-    ; ; resb@gsnAboveYRefLineColor = "blue"
-    ; resb@gsnDraw = False
-    ; resb@gsnFrame = False
-    ; resb@gsFillColor = "forest green"
-    ; resb@gsFillOpacityF = 0.05
-    ; resb@tfPolyDrawOrder = "PreDraw"
-    ; ; resb@gs
-    ; ; resb@trYMinF = min(rts@tmYLValues)      ; min value on x-axis
-    ; ; resb@trYMaxF = max(rts@tmYLValues)
-    ; ; tsb = ts0
-    ; ; tsb = 10
-    ; xx = (/1978,1978,1998.5,1998.5,1978/)
-    ; yy = (/-3.0,3.0,3.0,-3.0,-3.0/)
-    ; str = unique_string("xy")
-    ; plot@$str$ = gsn_add_polygon(wks, plot, xx, yy, resb)
-    ; overlay(plot,plot@$str$)
-    ; str0 = unique_string("xy")
-    ; resb@gsFillColor = "tomato"
-    ; xx = xx+20.5
-    ; plot@$str$ = gsn_add_polygon(wks, plot, xx, yy, resb)
-    ; overlay(plot,plot@$str$)
-      
-    
-  ;   if(isatt(opt,"rm") .and. opt@rm .gt. 0)then
-  ;     ts_rm  = runave_Wrap(ts0, opt@rm, 0)
-  ;     rts_rm = True
-  ;     rts_rm@xyLineColor="black"
-  ;     rts_rm@gsnYRefLine           = 0.    
-  ;     rts_rm@tiYAxisString = ""         ; y-axis label
-  ;     rts_rm@tiXAxisString =""
-  ;     rts_rm@tmXBOn=False
-  ;     rts_rm@tmYLOn=False
-  ;     ; rts_rm@tmXBLabelFontHeightF = 0.02    ;font height of tick labels
-  ;     ; rts_rm@tmYLLabelFontHeightF = 0.02   
-  ;     rts_rm@gsnXYBarChart =False 
-  ;     rts_rm@xyLineThicknessF =8.
-  ;     plot_rm=gsn_csm_xy(wks,ts0&year,ts_rm,rts_rm)
-  ;   end if
-  
-  ;   if(isatt(opt,"trend") .and. opt@trend)then
-  ;     rc=regline(ts0&time,ts0)
-  ;     xx=(/ts0&time(0),ts0&time(nyear-1)/)
-  ;     print(xx)
-  ;         xx = (/1997,2006/)
-  
-  ;     yy=(/ts0&time(0)*rc+rc@yintercept,ts0&time(nyear-1)*rc+rc@yintercept/)
-  ;     print(yy)
-  ;     res_lines                   = True                  ; polyline mods desired
-  ;     res_lines@gsLineDashPattern = 0.                    ; solid line
-  ;     res_lines@gsLineThicknessF  = 6.                    ; line thicker
-  ;     res_lines@gsLineColor       = "green"
-  ;     trend = gsn_add_polyline(wks,plot_rm,xx,yy,res_lines)
-  ;   end if
-  ;---------------------------Add plot legend-----------------------------------
-    ; if(get_res_value_keep(opt,"legend",False))then
-    ;   res_lines                   = True                  ; polyline mods desired
-    ;   res_lines@gsLineDashPattern = 0.                    ; solid line
-    ;   res_lines@gsLineThicknessF  = 8.                    ; line thicker
-    ;   res_text                    = True                  ; text mods desired
-    ;   res_text@txFontHeightF      = 0.035               ; change text size
-    ;   res_text@txJust             = "CenterLeft"          ; text justification
-    ;   res_text@txFontColor = "dodgerblue1"
-    ;   name = opt@name0
-    ;   pos = opt@pos0
-    ;   res_lines@gsLineColor = get_res_value_keep(opt,"color0","dodgerblue1") 
-    ;   res_text@txFontColor = get_res_value_keep(opt,"color0","dodgerblue1") 
-    ;   plot0 = gsn_add_text(wks,plot,name,pos(0),pos(1),res_text); add text
-    ;   name = opt@name1
-    ;   pos = opt@pos1
-    ;   res_lines@gsLineColor = get_res_value_keep(opt,"color1","dodgerblue1") 
-    ;   res_text@txFontColor = get_res_value_keep(opt,"color1","dodgerblue1") 
-    ;   plot1 = gsn_add_text(wks,plot,name,pos(0),pos(1),res_text); add text
-      ; draw(plot)
-      ; frame(wks)
-      ; opt@nameL = where(isatt(ts0, "name"), ts0@name, "null")
-      ; opt@nameR = where(isatt(ts1, "name"), ts1@name, "null")
-      ; x = 0.03
-      ; y = 0.9
-      ; x_scale = max(ts0&time)-min(ts0&time)
-      ; y_scale = opt@minmax(1)-opt@minmax(0)
-      ; printVarSummary(ts0)
-      ; xx = (/ts0&time(0)+x*x_scale,ts0&time(0)+(x+0.1)*x_scale/)
-      ; yy = (/opt@minmax(0)+y*y_scale,opt@minmax(0)+y*y_scale/)
-      ; text_pos = ts0&time(0)+(x+0.11)*x_scale
+    ;resc@cnLevels=cnLevels(type,:)
+    ;rec_p=gsn_csm_contour(wks, rec, resc)
+    ;overlay(ccr_p(a), rec_p)
+    ; if(isatt(opt, "dotslon") .and. isatt(opt, "dotslat"))
+    ;   resl=True
+    ;   resl@gsLineColor= "tomato"
+    ;   resl@gsLineThicknessF=8.0
+    ;   str = unique_string("polyline")
+    ;   plot(a)@$str$=gsn_add_polyline(wks, plot(a),opt@dotslon,opt@dotslat,resl)
+    ; end if
 
-      ; u_dum11 = gsn_add_polyline(wks,plot,xx,yy,res_lines)              
-      ; u_dum12 = gsn_add_text(wks,plot,opt@nameL,text_pos,yy(0),res_text)
-      ; res_lines@gsLineColor       = "red"
-      ; y = y-0.1
-      ; yy = (/opt@minmax(0)+y*y_scale,opt@minmax(0)+y*y_scale/)
-      ; u_dum21 = gsn_add_polyline(wks,plot,xx,yy,res_lines)              
-      ; u_dum22 = gsn_add_text(wks,plot,opt@nameR,text_pos,yy(0),res_text)
-      
-    ;  end if
+    ; cnres           = True
+    ; cnres@china     = True       ;draw china map or not
+    ; cnres@river     = True       ;draw chan gjiang&huanghe or not
+    ; cnres@province  = True       ;draw province boundary or not
+    ; cnres@nanhai    = True       ;draw nanhai or not 
+    ; cnres@diqu      = False       ; draw diqujie or not
+
+    ; ;chinamap = add_china_map(wks,ccr_p(2*a),cnres);draw(ccr_p(a))
+    ; ;frame(wks)
+    ; delete([/X,tem0,tem1,over1,over0/])
+  print("success!")
+  if(get_res_value_keep(opt,"gsnDraw",True)) draw(plot) end if
+  if(get_res_value_keep(opt,"gsnFrame",True)) frame(wks) end if
   return(plot)
-  end
+end

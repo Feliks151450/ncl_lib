@@ -1,3 +1,5 @@
+
+
 undef("printx")
 procedure printx(str)
   begin
@@ -6,7 +8,79 @@ procedure printx(str)
   print("----------------------------------------------------")
 end
 
+undef("designal") ; FX| designal
+  function designal(ts0,ts1)
+  begin
+  rec=regline(ts1, ts0)
+  ts=ts0-rec*ts1
+  copy_VarCoords(ts0, ts)
+  ts@name = ts0@name+"-"+ts1@name
+  return(ts)
+end
 
+undef("smart_notify")
+procedure smart_notify(wks,ts,type,opt)
+  begin
+  print("----------------------------------------------------")
+  print("in wks: "+wks@name)
+  print("----------------------------------------------------")
+end
+
+undef("setDefaultAtt")
+procedure setDefaultAtt(res, att:string, default)
+begin
+  if(isatt(res,att)) return(0) end if
+  if(typeof(default) .eq. "list")
+    list_size = ListCount(default)
+    do i = 0, list_size-1, 1
+      var := default[i]
+      if(any(ismissing(var))) continue
+      else 
+        res@$att$ = var
+        break
+      end if
+    end do
+  else
+    res@$att$ = default
+  end if
+end
+
+undef("setDefaultAtts")
+procedure setDefaultAtts(res:logical, atts[*]:string, defaults:list)
+begin
+  if(dimsizes(atts) .ne. ListCount(defaults))
+    print("size of atts must equal to defaults")
+    return(0)
+  end if
+  list_size = ListCount(defaults)
+  do i = 0, list_size-1, 1
+    if(isatt(res,atts(i))) 
+      continue
+    else 
+      res@$atts(i)$ =defaults[i]
+    end if
+  end do
+end
+
+undef("setExistAtt")
+procedure setExistAtt(res:logical, att:string, default)
+begin
+  if(.not. isatt(res,att)) return(0) end if
+  if(typeof(default) .eq. "list")
+    list_size = ListCount(default)
+    do i = 0, list_size-1, 1
+      var := default[i]
+      if(ismissing(var))
+        continue
+      else 
+        res@$att$ := var
+        break
+      end if
+    end do
+  else
+    res@$att$ := default
+  end if
+end
 
 undef("is_element")
 function is_element(element[1],array[*])
@@ -64,107 +138,7 @@ function merge(var0,var1); 合并的维度必须在最右侧
   return(var)
 end
 
-undef("read_from_file")
-function read_from_file(f,type,var_name,range,res)
-  begin
-  if(range(2) .gt. range(3))
-    printx("wrong range!")
-    exit
-  end if
-  isLevel = isfilevar(f,"level")
-  if(isLevel .and. dimsizes(type@level) .ne. 1)
-    printx("you should specify only one level, or use the resources: levels")
-    exit
-  end if
-  lon = f->lon
-  centerLon = where(min(lon)*max(lon) .ge. 0, 180, 0)
 
-  utc_date = cd_calendar(f->time, 0)
-  year     = floattointeger(utc_date(:,0))
-  month    = floattointeger(utc_date(:,1))
-  mon_ind = ind(year .ge. min(type@year) .and. year .le. max(type@year) .and. (month .ge. min(type@months) .and. month .le. max(type@months))) 
-
-  range(2:) = range(2:)-where(range(2) .ge. centerLon+180,360,0)
-  range(2:) = range(2:)+where(range(3) .le. centerLon-180,360,0)
-
-  if(range(2) .ge. centerLon-180 .and. range(3) .le. centerLon+180);该情况不用分开读取
-    if(isLevel)
-      level = get_res_value_keep(type,"levels",type@level)
-      var = f->$var_name$(mon_ind,{level},{range(0):range(1)},{range(2):range(3)})
-    else
-      var = f->$var_name$(mon_ind,{range(0):range(1)},{range(2):range(3)})
-    end if
-  else
-    adjust = where(range(2) .lt. centerLon-180,360,0)
-    if(isLevel)
-      level = get_res_value_keep(type,"levels",type@level)
-      tem0 = f->$var_name$(mon_ind,{level},{range(0):range(1)},{range(2)+adjust:centerLon+180})
-      tem1 = f->$var_name$(mon_ind,{level},{range(0):range(1)},{centerLon-180:range(3)-(360-adjust)})
-    else
-      tem0 = f->$var_name$(mon_ind,{range(0):range(1)},{range(2)+adjust:centerLon+180})
-      tem1 = f->$var_name$(mon_ind,{range(0):range(1)},{centerLon-180:range(3)-(360-adjust)})
-    end if
-    lon3 = new((/3,dimsizes(lon)/),float)
-    lon_ind = ind(lon3 .ge. range(2) .and. lon3 .le. range(3))
-    var_lon = lon3(lon_ind)
-    copy_VarAtts(lon,var_lon)
-    var = merge(tem0,tem1)
-    dim_lon = dimsizes(dimsizes(var))-1
-    var!dim_lon = "lon"
-    var&lon = var_lon
-    return(var)
-  end if
-end
-
-undef("read_from_files")
-function read_from_files(f,type,var_name,range,res)
-  begin
-  if(range(2) .gt. range(3))
-    printx("wrong range!")
-    exit
-  end if
-  isLevel = isfilevar(f[0],"level")
-  if(isLevel .and. dimsizes(type@level) .ne. 1)
-    printx("you should specify only one level, or use the resources: levels")
-    exit
-  end if
-  lon = f[0]->lon
-  centerLon = where(min(lon)*max(lon) .ge. 0, 180, 0)
-
-  range(2:) = range(2:)-where(range(2) .ge. centerLon+180,360,0)
-  range(2:) = range(2:)+where(range(3) .le. centerLon-180,360,0)
-  if(range(2) .ge. centerLon-180 .and. range(3) .le. centerLon+180);该情况不用分开读取
-    if(isLevel)
-      level = get_res_value_keep(type,"levels",type@level)
-      var = f[res@ind_year]->$var_name$(:,type@months-1,{level},{range(0):range(1)},{range(2):range(3)})
-    else
-      var = f[res@ind_year]->$var_name$(:,type@months-1,{range(0):range(1)},{range(2):range(3)})
-    end if
-  else
-    adjust = where(range(2) .lt. centerLon-180,360,0)
-    if(isLevel)
-      level = get_res_value_keep(type,"levels",type@level)
-      tem0 = f[res@ind_year]->$var_name$(:,type@months-1,{level},{range(0):range(1)},{range(2)+adjust:centerLon+180})
-      tem1 = f[res@ind_year]->$var_name$(:,type@months-1,{level},{range(0):range(1)},{centerLon-180:range(3)-(360-adjust)})
-    else
-      tem0 = f[res@ind_year]->$var_name$(:,type@months-1,{range(0):range(1)},{range(2)+adjust:centerLon+180})
-      tem1 = f[res@ind_year]->$var_name$(:,type@months-1,{range(0):range(1)},{centerLon-180:range(3)-(360-adjust)})
-    end if
-    lon3 = new(3*dimsizes(lon),float)
-    lon3(:dimsizes(lon)-1) = lon-360
-    lon3(dimsizes(lon):2*dimsizes(lon)-1) = lon
-    lon3(2*dimsizes(lon):3*dimsizes(lon)-1) = lon+360
-    lon_ind = ind(lon3 .ge. range(2) .and. lon3 .le. range(3))
-    var_lon = lon3(lon_ind)
-    copy_VarAtts(lon,var_lon)
-    var = merge(tem0,tem1)
-    dim_lon = dimsizes(dimsizes(var))-1
-    var!dim_lon = "lon"
-    var&lon = var_lon
-    copy_VarAtts(type,var)
-  end if
-  return(var)
-end
 
 undef("setNatureMode")
 procedure setNatureMode (res)
@@ -172,29 +146,46 @@ procedure setNatureMode (res)
   res@gsnLeftString = ""
   res@gsnRightString = ""
   res@gsnStringBold = True
-  res@gsnLeftStringFontHeightF = 0.04
-  res@tiYAxisOffsetXF = 0.025
+  res@gsnLeftStringFontHeightF = get_res_value_keep(res,"gsnLeftStringFontHeightF", 0.025)
+  res@tiYAxisOffsetXF = get_res_value_keep(res,"tiYAxisOffsetXF", 0.025)
 end
 
 undef("setLabelbarTitle");FX| 设置色标标题
-  procedure setLabelbarTitle (res)
+  procedure setLabelbarTitle (res,title)
   begin
+  res@lbTitleString = title
   res@lbTitleOn = True
   res@lbTitleExtentF = 0.2
-  res@lbOrientation       = get_res_value_keep(res,"lbOrientation","Horizontal")
-  if(.not. isatt(res,"lbTitleFontHeightF"))
-    res@lbTitleFontHeightF = res@lbLabelFontHeightF
-  end if
-  if(.not. isatt(res,"lbTitleOffsetF"))
-    res@lbTitleOffsetF = 0.2
-  end if
+  ; res@lbOrientation       = get_res_value_keep(res,"lbOrientation","Horizontal")
+  setDefaultAtt(res,"lbOrientation","Horizontal")
+  ; if(.not. isatt(res,"lbTitleFontHeightF"))
+  ;   res@lbTitleFontHeightF = res@lbLabelFontHeightF
+  ; end if
+  setDefaultAtt(res,"lbTitleFontHeightF",res@lbLabelFontHeightF)
+  ; if(.not. isatt(res,"lbTitleOffsetF"))
+  ;   res@lbTitleOffsetF = 0.2
+  ; end if
+  setDefaultAtt(res,"lbTitleOffsetF",0.2)
   if(res@lbOrientation .eq. "Vertical")
-    res@lbTitlePosition = "right"
+    ; res@lbTitlePosition = get_res_value_keep(res,"lbTitlePosition","right")
+    setDefaultAtt(res,"lbTitlePosition","right")
     res@lbTitleDirection = "across"
     res@lbTitleAngleF = 270
   else
-    res@lbTitlePosition = "bottom"
+    ; res@lbTitlePosition = get_res_value_keep(res,"lbTitlePosition","bottom")
+    setDefaultAtt(res,"lbTitlePosition","bottom")
     res@lbTitleDirection = "across"
+    res@lbTitleAngleF = 0
+    ; res@pmLabelBarOrthogonalPosF = res@pmLabelBarOrthogonalPosF+0.1
+    if(res@lbTitlePosition .eq. "right")
+      res@lbTitleExtentF = 0.01
+      res@lbTitleOffsetF = 0.1
+      ; res@pmLabelBarOrthogonalPosF = res@pmLabelBarOrthogonalPosF-0.1
+    end if
+    if(res@lbTitlePosition .eq. "left")
+      res@lbTitleExtentF = 0.1
+      res@lbTitleOffsetF = 0.1
+    end if
   end if
 end
 
@@ -202,31 +193,193 @@ undef("setLabelbar");FX| 设置色标
 procedure setLabelbar (res)
   begin
       ; resp@lbOrientation = "Horizontal"
-  res@lbBoxLineColor = "white"
-  res@lbBoxLineThicknessF = 25
-  res@lbLabelFontHeightF = 0.016
-    ; res@gsnPanelScalePlotIndex = 2
-  res@lbBoxEndCapStyle = "TriangleBothEnds"
-    ; ; resp@gsnFrame = False
-    ; ; resp@gsnPanelLeft = 0.1
-    ; ; resp@gsnPanelRight = 0.1
-    ; ; resp@gsnPanelTop = 1.1
-    ; ; resp@gsnPanelYWhiteSpacePercent = 16.0
-    ; resp@gsnPanelXWhiteSpacePercent = 5
-    ; ; resp@gsnMaximize = False
-    ; if(resp@lbOrientation .eq. "Vertical")
-    ;     resp@pmLabelBarWidthF = 0.13
-    ;     resp@pmLabelBarHeightF = 0.9
-    ;     resp@gsnPanelBottom = 0.07
-    ;     resp@pmLabelBarParallelPosF = -0.022
-    ;     resp@gsnPanelYWhiteSpacePercent = 2.0
-    ;     else 
-    ;     resp@pmLabelBarHeightF = 0.09
-    ;     resp@pmLabelBarWidthF = 0.85
-    ;     resp@gsnPanelLeft = 0.01
-    ;     resp@gsnPanelRight = 0.99
-    ;     resp@pmLabelBarOrthogonalPosF = 0.026
-    ;     resp@pmLabelBarParallelPosF = 0.002
-    ;     resp@gsnPanelYWhiteSpacePercent = 6.0
-    ; end if
+  res@lbLabelBarOn        = True
+  res@lbBoxLineColor = "black"; "white"
+  setDefaultAtt(res,"lbBoxLineThicknessF",[/res@tmBorderThicknessF,1/])
+
+  res@lbLabelFontHeightF  = get_res_value_keep(res,"lbLabelFontHeightF",0.03)
+  ; res@lbBoxEndCapStyle    = "" ;get_res_value_keep(res,"lbStyle","TriangleBothEnds")
+  res@lbOrientation       = get_res_value_keep(res,"lbOrientation","Horizontal")
+  res@lbBoxEndCapStyle = "RectangleEnds"
+end
+
+undef("sin_dg")
+function sin_dg(degree)
+  begin
+  result = sin(degree*get_d2r("float"))
+  ; result = sin(degree/180.0*get_pi("float"))
+  return(result)
+end
+
+undef("cos_dg")
+function cos_dg(degree)
+  begin
+  result = cos(degree*get_d2r("float"))
+  ; result = cos(degree/180.0*get_pi("float"))
+  return(result)
+end
+
+undef("add_YRAxisString") ; FX| add_YRAxisString
+procedure add_YRAxisString (plotid,text:string,opt)
+  begin
+  tmp_wks = NhlGetParentWorkstation(plotid)
+    rightaxis_string = create "right_axis" textItemClass tmp_wks
+      "txString"      : text
+      "txFontHeightF" : get_res_value_keep(opt, "txFontHeightF",0.05)
+      "txFontColor"   : get_res_value_keep(opt, "txFontColor","black")
+      "txAngleF"      : 270.
+    end create
+
+    anno = NhlAddAnnotation(plotid,rightaxis_string)
+    
+    setvalues anno
+      "amZone"          : 3      ; Just outside plot area
+      "amJust"          : "centercenter"
+      "amSide"          : "right" 
+      "amParallelPosF"  : 0.5
+      "amOrthogonalPosF": 0.03
+      "amResizeNotify"  : True     ; Resize if plot resized.
+    end setvalues
+  ; return(anno)
+end
+
+undef("add_YLAxisString") ; FX| add_YLAxisString
+procedure add_YLAxisString (plotid,text:string,opt)
+  begin
+  tmp_wks = NhlGetParentWorkstation(plotid)
+    rightaxis_string = create "right_axis" textItemClass tmp_wks
+      "txString"      : text
+      "txFontHeightF" : get_res_value_keep(opt, "txFontHeightF",0.05)
+      "txFontColor"   : get_res_value_keep(opt, "txFontColor","black")
+      "txAngleF"      : 90.
+    end create
+
+    anno = NhlAddAnnotation(plotid,rightaxis_string)
+    
+    setvalues anno
+      "amZone"          : 3      ; Just outside plot area
+      "amJust"          : "centercenter"
+      "amSide"          : "left" 
+      "amParallelPosF"  : 0.5
+      "amOrthogonalPosF": 0.05-get_res_value_keep(opt, "tiYlOffsetXF",0.)
+      "amResizeNotify"  : True     ; Resize if plot resized.
+    end setvalues
+end
+
+undef("add_XBAxisString") ; FX| add_XBAxisString
+procedure add_XBAxisString (plotid,text:string,opt)
+  begin
+  tmp_wks = NhlGetParentWorkstation(plotid)
+    rightaxis_string = create "right_axis" textItemClass tmp_wks
+      "txString"      : text
+      "txFontHeightF" : get_res_value_keep(opt, "txFontHeightF",0.035)
+      "txFontColor"   : get_res_value_keep(opt, "txFontColor","black")
+      "txAngleF"      : 0.
+    end create
+
+    anno = NhlAddAnnotation(plotid,rightaxis_string)
+    
+    setvalues anno
+      "amZone"          : 3      ; Just outside plot area
+      "amJust"          : "centercenter"
+      "amSide"          : "bottom" 
+      "amParallelPosF"  : get_res_value_keep(opt, "tiXBOffsetXF",0.5)
+      "amOrthogonalPosF": get_res_value_keep(opt, "tiXBOffsetYF",0.)
+      "amResizeNotify"  : True     ; Resize if plot resized.
+    end setvalues
+end
+
+
+undef("add_LeftString") ; FX| add_LeftString
+procedure add_LeftString (plotid,text:string,opt)
+  begin
+  tmp_wks = NhlGetParentWorkstation(plotid)
+  ; tmp_wks = NhlGetParentWorkstation(tem)
+  rightaxis_string = create "right_axis" textItemClass tmp_wks
+    "txString"      : text
+    "txFontHeightF" : get_res_value_keep(opt, "gsnLeftStringFontHeightF",0.035)
+    "txFontColor"   : get_res_value_keep(opt, "txFontColor","black")
+    "txAngleF"      : 0.
+    "txFont"        : where(get_res_value_keep(opt,"gsnStringBold",False),22,21)
+  end create
+  anno = NhlAddAnnotation(plotid,rightaxis_string)
+    
+  setvalues anno
+    "amZone"          : 3      ; Just outside plot area
+    "amJust"          : "TopLeft"
+    "amSide"          : "top" 
+    "amParallelPosF"  : get_res_value_keep(opt, "gsnLeftOffsetXF",0.)
+    "amOrthogonalPosF": 0.05+get_res_value_keep(opt, "gsnLeftOffsetYF",0.)
+    "amResizeNotify"  : True     ; Resize if plot resized.
+  end setvalues
+end
+
+undef("add_RightString") ; FX| add_RightString
+procedure add_RightString (plotid:graphic,text:string,opt)
+  begin
+  tmp_wks = NhlGetParentWorkstation(plotid)
+  RightString = create "RightString" textItemClass tmp_wks
+    "txString"      : text
+    "txFontHeightF" : get_res_value_keep(opt, "gsnRightStringFontHeightF",0.035)
+    "txFontColor"   : get_res_value_keep(opt, "txFontColor","black")
+    "txAngleF"      : 0.
+    "txFont"        : where(get_res_value_keep(opt,"gsnStringBold",False),22,21)
+  end create
+
+  anno = NhlAddAnnotation(plotid,RightString)
+  
+  setvalues anno
+    "amZone"          : 3      ; Just outside plot area
+    "amJust"          : "TopRight"
+    "amSide"          : "top" 
+    "amParallelPosF"  : 0.95+get_res_value_keep(opt, "gsnRightOffsetXF",0.)
+    "amOrthogonalPosF": 0.05+get_res_value_keep(opt, "gsnRightOffsetYF",0.)
+    "amResizeNotify"  : True     ; Resize if plot resized.
+  end setvalues
+end
+
+undef("add_CornerString") ; FX| add_CornerString
+procedure add_CornerString (plotid,text:string,opt)
+  begin
+  tmp_wks = NhlGetParentWorkstation(plotid)
+  CornerString = create "CornerString" textItemClass tmp_wks
+    "txString"      : text
+    "txFontHeightF" : get_res_value_keep(opt, "gsnCornerStringFontHeightF",0.035)
+    "txFontColor"   : get_res_value_keep(opt, "txFontColor","black")
+    "txAngleF"      : 0.
+    "txFont"        : 22
+  end create
+
+    anno = NhlAddAnnotation(plotid,CornerString)
+    
+  setvalues anno
+    "amZone"          : 3      ; Just outside plot area
+    "amJust"          : "topleft"
+    "amSide"          : "top" 
+    "amParallelPosF"  : -0.1+get_res_value_keep(opt, "gsnCornerOffsetXF",0.)
+    "amOrthogonalPosF": 0.05+get_res_value_keep(opt, "gsnCornerOffsetYF",0.)
+    "amResizeNotify"  : True     ; Resize if plot resized.
+  end setvalues
+end
+
+undef("set_XBTick")
+procedure set_XBTick(res,dim:string)
+begin
+  res@tmXBMode = "Explicit"
+  spacing = floattointeger(get_res_value_keep(res,"tmXBTickSpacingF",10))
+  startF = get_res_value_keep(res,"tmXBTickStartF",0)
+  endF = get_res_value_keep(res,"tmXBTickEndF",360)
+  res@tmXBValues = ispan(startF,endF,spacing)
+  if(is_element(dim,(/"lon","Lon","Longitude","longtude"/)))
+    unit = where(res@tmXBValues .lt. 0, -res@tmXBValues+"W",res@tmXBValues+"")
+    unit = where(res@tmXBValues .gt. 180, 360-res@tmXBValues+"W",unit)
+    unit = where(res@tmXBValues .gt. 0 .and. res@tmXBValues .lt. 180,res@tmXBValues+"E",unit )
+  else if(is_element(dim,(/"lat","Lat","latitude","Latitude"/)))
+    unit = where(res@tmXBValues .lt. 0, -res@tmXBValues+"S",res@tmXBValues+"")
+    unit = where(res@tmXBValues .gt. 0, res@tmXBValues+"N",unit)
+  else
+    unit = res@tmXBValues
+  end if
+  end if
+  res@tmXBLabels = unit
 end
